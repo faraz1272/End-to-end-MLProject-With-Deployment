@@ -2,7 +2,7 @@
 # It's a powerful tool for handling system-specific parameters and functions.
 
 import sys
-import logging
+from src.logger import logging  # Importing the logging module from the src package to handle logging of messages.
 
 
 def error_message_detail(error, error_detail:sys):
