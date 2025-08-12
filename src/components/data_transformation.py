@@ -21,12 +21,23 @@ class DataTransformationConfig:
     """Data Transformation Configuration Class
     This class holds the configuration for data transformation, including paths for transformed data.
     """
-    preprocessor_obj_file_path = os.path.join('artifacts', 'preprocessor.pkl')
+    preprocessor_obj_file_path: str
 
 
 class DataTransformation:
-    def __init__(self):
-        self.data_transformation_config = DataTransformationConfig()
+    def __init__(self, config: dict | None = None):
+        artifacts_dir = "artifacts"
+        preproc_name = "preprocessor.pkl"
+
+        if config:
+            data_cfg = config.get("data", {})
+            artifacts_dir = data_cfg.get("artifacts_dir", artifacts_dir)
+            out_cfg = config.get("output", {})
+            preproc_name = out_cfg.get("preprocessor_filename", preproc_name)
+
+        self.data_transformation_config = DataTransformationConfig(
+            preprocessor_obj_file_path=os.path.join(artifacts_dir, preproc_name)
+        )
 
     def get_data_transformer_object(self):
         """This function creates a data transformation pipeline for numerical and categorical features.

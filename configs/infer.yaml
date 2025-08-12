@@ -1,0 +1,4 @@
+artifacts_dir: artifacts
+local_model_path: artifacts/model.pkl   # where your trained model lands locally
+use_s3: false                           # we’ll flip to true when we deploy
+model_s3_uri: s3://your-bucket/student-score/production/

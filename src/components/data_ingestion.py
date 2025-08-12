@@ -12,22 +12,40 @@ from src.components.model_trainer import ModelTrainer, ModelTrainerConfig
 
 @dataclass
 class DataIngestionConfig:
-    """
-    Data Ingestion Configuration Class  
-    This class holds the configuration for data ingestion, including paths for train, test, and raw data.
-    """
-    train_data_path: str = os.path.join('artifacts', 'train.csv')
-    test_data_path: str = os.path.join('artifacts', 'test.csv')
-    raw_data_path: str = os.path.join('artifacts', 'data.csv')
+    train_data_path: str
+    test_data_path: str
+    raw_data_path: str
+    raw_csv: str  # NEW: where to read the original dataset from
 
 class DataIngestion:
-    def __init__(self):
-        self.ingestion_config = DataIngestionConfig()
+    def __init__(self, config: dict | None = None):
+        """
+        If config is provided, pull paths from it. Otherwise, use your current defaults.
+        """
+        artifacts_dir = "artifacts"
+        defaults = {
+            "train_data_path": os.path.join(artifacts_dir, "train.csv"),
+            "test_data_path": os.path.join(artifacts_dir, "test.csv"),
+            "raw_data_path": os.path.join(artifacts_dir, "data.csv"),
+            "raw_csv": "notebook/data/stud.csv",  # your current hardcoded path
+        }
+
+        if config:
+            data_cfg = config.get("data", {})
+            artifacts_dir = data_cfg.get("artifacts_dir", artifacts_dir)
+            self.ingestion_config = DataIngestionConfig(
+                train_data_path=data_cfg.get("train_csv", os.path.join(artifacts_dir, "train.csv")),
+                test_data_path=data_cfg.get("test_csv", os.path.join(artifacts_dir, "test.csv")),
+                raw_data_path=data_cfg.get("raw_data_path", os.path.join(artifacts_dir, "data.csv")),
+                raw_csv=data_cfg.get("raw_csv", defaults["raw_csv"]),
+            )
+        else:
+            self.ingestion_config = DataIngestionConfig(**defaults)
 
     def initiate_data_ingestion(self):
         logging.info("Entered the data ingestion method or component")
         try:
-            df = pd.read_csv('notebook/data/stud.csv')
+            df = pd.read_csv(self.ingestion_config.raw_csv)
             logging.info("Read the dataset as dataframe")
 
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)

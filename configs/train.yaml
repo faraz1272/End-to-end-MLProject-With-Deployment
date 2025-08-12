@@ -1,0 +1,10 @@
+data:
+  raw_csv: notebook/data/stud.csv
+  artifacts_dir: artifacts
+  train_csv: artifacts/train.csv
+  test_csv: artifacts/test.csv
+output:
+  model_filename: model.pkl
+  preprocessor_filename: preprocessor.pkl
+training:
+  min_r2: 0.6

@@ -25,11 +25,26 @@ from src.utils import save_object, evaluate_models
 
 @dataclass
 class ModelTrainerConfig:
-    trained_model_file_path = os.path.join("artifacts", "model.pkl")
+    trained_model_file_path: str
+    min_r2: float  # NEW
 
 class ModelTrainer:
-    def __init__(self):
-        self.model_trainer_config = ModelTrainerConfig()
+    def __init__(self, config: dict | None = None):
+        artifacts_dir = "artifacts"
+        model_name = "model.pkl"
+        min_r2 = 0.6  # your current threshold
+
+        if config:
+            data_cfg = config.get("data", {})
+            artifacts_dir = data_cfg.get("artifacts_dir", artifacts_dir)
+            out_cfg = config.get("output", {})
+            model_name = out_cfg.get("model_filename", model_name)
+            min_r2 = config.get("training", {}).get("min_r2", min_r2)
+
+        self.model_trainer_config = ModelTrainerConfig(
+            trained_model_file_path=os.path.join(artifacts_dir, model_name),
+            min_r2=min_r2
+        )
 
     def initiate_model_trainer(self, train_array, test_array):
         try:
@@ -105,7 +120,7 @@ class ModelTrainer:
 
             best_model = models[best_model_name]
 
-            if best_model_score<0.6:
+            if best_model_score<self.model_trainer_config.min_r2:
                 raise CustomException("No best model found")
             logging.info(f"Best model found on both training and testing dataset")
 
@@ -121,3 +136,16 @@ class ModelTrainer:
 
         except Exception as e:
             raise CustomException(e, sys)
+        
+if __name__ == "__main__":
+    import argparse
+    from src.utils import read_yaml
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, required=True, help="Path to train.yaml")
+    args = parser.parse_args()
+
+    config = read_yaml(args.config)
+
+    trainer = ModelTrainer(config)
+    trainer.run()

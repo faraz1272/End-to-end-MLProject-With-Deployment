@@ -1,6 +1,8 @@
 import os
 import sys
 import dill
+import yaml
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -66,3 +68,12 @@ def load_object(file_path):
             return dill.load(file_obj)
     except Exception as e:
         raise CustomException(e, sys)
+    
+def read_yaml(path: str) -> dict:
+    """Load a YAML file and return a dict."""
+
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Config not found: {p.resolve()}")
+    with p.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
