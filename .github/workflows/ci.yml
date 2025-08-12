@@ -51,7 +51,7 @@ jobs:
       id-token: write
       contents: read
     env:
-      AWS_REGION: eu-north-1
+      AWS_REGION: eu-west-2
       ECR_REPO: student-score-api
     steps:
       - name: Checkout
