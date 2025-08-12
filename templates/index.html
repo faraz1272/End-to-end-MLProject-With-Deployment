@@ -1,57 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Exam Performance Predictor</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .hero-section {
-            padding: 60px 20px;
-            text-align: center;
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white;
-        }
-        .hero-section h1 {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-        }
-        .hero-section p {
-            font-size: 1.2rem;
-            margin-bottom: 25px;
-        }
-        .btn-primary {
-            padding: 10px 25px;
-            font-size: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Exam Performance Predictor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #f8f9fa; }
+    .hero-section {
+      padding: 60px 20px;
+      text-align: center;
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      color: white;
+    }
+    .chart-card {
+      background: #fff; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    }
+    .metric { font-size: 1.75rem; font-weight: 700; }
+    canvas { display:block; width:100% !important; height:320px !important; }
+  </style>
 </head>
 <body>
-    <div class="hero-section">
-        <h1>Welcome to the Student Exam Performance Predictor</h1>
-        <p>Use our prediction tool to estimate a student’s maths score based on their personal and academic information.</p>
-        <a href="{{ url_for('predict_datapoint') }}" class="btn btn-primary">Get Started</a>
+  <div class="hero-section">
+    <h1>Welcome to the Student Exam Performance Predictor</h1>
+    <p>Predict a student’s maths score and explore insights from the dataset.</p>
+    <div class="d-flex justify-content-center gap-2">
+      <a href="{{ url_for('predict_datapoint') }}" class="btn btn-light">Predict score</a>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light">View dashboard</a>
+    </div>
+  </div>
+
+  <div class="container my-5">
+    <!-- How it works -->
+    <h2 class="text-center mb-4">How It Works</h2>
+    <div class="row text-center mb-5">
+      <div class="col-md-4">
+        <h5>1. Enter Details</h5>
+        <p>Provide gender, ethnicity, parental education, lunch, prep, reading & writing scores.</p>
+      </div>
+      <div class="col-md-4">
+        <h5>2. Model Predicts</h5>
+        <p>We preprocess inputs and run a trained model to estimate maths score.</p>
+      </div>
+      <div class="col-md-4">
+        <h5>3. See Insights</h5>
+        <p>Check the dashboard for metrics, residuals, and feature importance.</p>
+      </div>
     </div>
 
-    <div class="container mt-5">
-        <h2 class="text-center mb-4">How It Works</h2>
-        <div class="row text-center">
-            <div class="col-md-4">
-                <h4>1. Enter Student Details</h4>
-                <p>Provide information such as gender, ethnicity, parental education, and scores in reading and writing.</p>
-            </div>
-            <div class="col-md-4">
-                <h4>2. Machine Learning Prediction</h4>
-                <p>Our model processes the input data and predicts the likely maths score for the student.</p>
-            </div>
-            <div class="col-md-4">
-                <h4>3. Get Your Result</h4>
-                <p>View the predicted score instantly and use it for analysis or academic planning.</p>
-            </div>
+    <!-- KPI cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="chart-card text-center">
+          <div>Samples</div><div id="kpi-n" class="metric">—</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="chart-card text-center">
+          <div>Mean (Math)</div><div id="kpi-mean" class="metric">—</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="chart-card text-center">
+          <div>Median (Math)</div><div id="kpi-median" class="metric">—</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="chart-card text-center">
+          <div>Std Dev (Math)</div><div id="kpi-std" class="metric">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="chart-card">
+          <h5 class="mb-3">Math Score Distribution</h5>
+          <canvas id="chartHist"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="chart-card">
+          <h5 class="mb-3">Average Math by Gender</h5>
+          <canvas id="chartGender"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="row g-4 mt-4">
+        <div class="col-lg-12">
+          <div class="chart-card">
+            <h5 class="mb-2">Quick Insights from EDA</h5>
+            <ul id="insights" class="mb-0"></ul>
+          </div>
         </div>
     </div>
+
+    <!-- Corr row -->
+    <div class="row g-4 mt-1">
+      <div class="col-lg-12">
+        <div class="chart-card">
+          <h5 class="mb-2">Correlations (with Math)</h5>
+          <div id="corr-list" class="small text-muted">—</div>
+        </div>
+      </div>
+    </div>
+
+        <!-- Project goal + implementation -->
+    <div class="container my-5">
+        <h2 class="text-center mb-3">How this project is implemented</h2>
+        <p class="lead text-center">
+        A small end-to-end MLOps project: train a regression model for <strong>math scores</strong>,
+        serve predictions via a containerized API, and surface insights on the web.
+        </p>
+    
+        <div class="row g-4 mt-1">
+        <div class="col-md-6">
+            <div class="chart-card h-100">
+            <h5 class="mb-2">Architecture (high level)</h5>
+            <ul class="mb-0">
+                <li>Pipeline: ingestion → transformation (preprocessor) → model training.</li>
+                <li>Artifacts: <code>artifacts/model.pkl</code>, <code>preprocessor.pkl</code>, <code>train.csv</code>, <code>test.csv</code>.</li>
+                <li>Serving: Flask + Gunicorn container; JSON <code>/predict</code> and UI routes.</li>
+                <li>Dashboard: reads <code>test.csv</code>, computes metrics & charts in-browser.</li>
+            </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-card h-100">
+            <h5 class="mb-2">Tools used</h5>
+            <ul class="mb-0">
+                <li><strong>Python &amp; scikit-learn</strong> (+ XGBoost/CatBoost) for modeling.</li>
+                <li><strong>MLflow</strong> for experiment tracking (params, metrics, artifacts).</li>
+                <li><strong>Flask + Gunicorn</strong> API, <strong>Chart.js</strong> &amp; Bootstrap UI.</li>
+                <li><strong>Docker</strong> images; <strong>GitHub Actions</strong> for CI (build &amp; health-check).</li>
+                <li><strong>Amazon ECR</strong> (image registry) &amp; <strong>AWS App Runner</strong> for deploy.</li>
+            </ul>
+            </div>
+        </div>
+        </div>
+    </div>
+    
+    <!-- Feedback -->
+    <div class="container my-4">
+        {% if request.args.get('feedback') == 'thanks' %}
+        <div class="alert alert-success">Thanks for your feedback — we’ve received it!</div>
+        {% endif %}
+    
+        <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="chart-card">
+            <h5 class="mb-3">Feedback</h5>
+            <form action="/feedback" method="POST" class="row g-3">
+                <div class="col-md-6">
+                <label class="form-label">Name (optional)</label>
+                <input name="name" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                <label class="form-label">Email (optional)</label>
+                <input name="email" type="email" class="form-control" />
+                </div>
+                <div class="col-12">
+                <label class="form-label">Message</label>
+                <textarea name="message" required rows="3" class="form-control" placeholder="What worked? What could be better?"></textarea>
+                </div>
+                <div class="col-12">
+                <button class="btn btn-primary">Send feedback</button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary ms-2">Open dashboard</a>
+                <a href="{{ url_for('predict_datapoint') }}" class="btn btn-outline-secondary ms-2">Try prediction</a>
+                </div>
+            </form>
+            </div>
+        </div>
+        </div>
+    </div>
+  
+    <!-- CTA -->
+    <div class="text-center my-5">
+      <a href="{{ url_for('predict_datapoint') }}" class="btn btn-primary me-2">Try a prediction</a>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">Open dashboard</a>
+    </div>
+  </div>
+
+  <script>
+    (async function() {
+      const res = await fetch('/api/eda');
+      const eda = await res.json();
+
+
+      // KPIs
+      const fmt = (x, d=2) => (typeof x === 'number' ? x.toFixed(d) : x);
+      document.getElementById('kpi-n').textContent      = eda.n;
+      document.getElementById('kpi-mean').textContent   = fmt(eda.mean, 2);
+      document.getElementById('kpi-median').textContent = fmt(eda.median, 2);
+      document.getElementById('kpi-std').textContent    = fmt(eda.std, 2);
+
+      // Histogram
+      new Chart(document.getElementById('chartHist').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: eda.hist.centers.map(v => v.toFixed(0)),
+          datasets: [{ label: 'Count', data: eda.hist.counts }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { title: { display: true, text: 'Math score (binned)' } },
+                    y: { title: { display: true, text: 'Count' } } }
+        }
+      });
+
+      // Avg by gender
+      const gLabels = eda.by_gender.map(x => x.label);
+      const gValues = eda.by_gender.map(x => x.value);
+      new Chart(document.getElementById('chartGender').getContext('2d'), {
+        type: 'bar',
+        data: { labels: gLabels, datasets: [{ label: 'Avg Math', data: gValues }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, title: { display: true, text: 'Average math score' } } }
+        }
+      });
+
+      // Correlations
+      const corr = eda.corr || {};
+      const items = Object.keys(corr).map(k => `${k}: ${corr[k].toFixed(3)}`);
+      document.getElementById('corr-list').textContent = items.length ? items.join('  ·  ') : 'No numeric correlations found.';
+
+      // Insights list
+        const ul = document.getElementById('insights');
+        (eda.insights || []).forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        ul.appendChild(li);
+        });
+    })();
+  </script>
 </body>
 </html>

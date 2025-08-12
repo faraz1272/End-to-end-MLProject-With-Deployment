@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Student Score{% endblock %}
+{% block content %}
+
+<h2>Model & Data Dashboard</h2>
+<p id="model-name" style="margin-top:-.6rem;color:#666"></p>
+
+<details class="card" style="background:#fff;padding:1rem;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);margin-bottom:1rem;" open>
+    <summary><strong>About these metrics</strong></summary>
+    <ul class="mb-0">
+      <li><strong>Data:</strong> charts use <code>artifacts/test.csv</code> (held-out split).</li>
+      <li><strong>Pipeline:</strong> inputs are transformed with <code>preprocessor.pkl</code>, then scored with <code>model.pkl</code>.</li>
+      <li><strong>R² (holdout):</strong> coefficient of determination on test set (higher is better).</li>
+      <li><strong>MAE:</strong> mean absolute error in score points (lower is better).</li>
+      <li><strong>RMSE:</strong> root mean squared error in score points (lower is better).</li>
+      <li><strong>Feature importance:</strong> permutation importance = increase in RMSE after shuffling a feature (sample ≤ 500 rows; higher Δ means more important). Correlated features may share credit.</li>
+      <li><strong>Plots:</strong> Pred vs Actual uses up to 200 points for speed; diagonal is ideal line <code>y=x</code>.</li>
+    </ul>
+</details>
+  
+
+<!-- Simple metric cards -->
+<style>
+  .grid3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
+  .card  { background: #fff; padding: 1rem; border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+  .metric { font-size: 2rem; font-weight: 700; margin: .25rem 0 0; }
+</style>
+
+<div class="grid3">
+  <div class="card"><div>R² (holdout)</div><div id="m-r2" class="metric">—</div></div>
+  <div class="card"><div>MAE</div><div id="m-mae" class="metric">—</div></div>
+  <div class="card"><div>RMSE</div><div id="m-rmse" class="metric">—</div></div>
+</div>
+
+<div class="grid">
+    <div class="col-6">
+        <h4>Predicted vs Actual</h4>
+        <div class="chart"><canvas id="chartPredActual"></canvas></div>
+      </div>
+      
+      <div class="col-6">
+        <h4>Residuals (pred − actual)</h4>
+        <div class="chart"><canvas id="chartResiduals"></canvas></div>
+      </div>
+      
+      <div class="col-12">
+        <h4>Residual Distribution (histogram)</h4>
+        <div class="chart"><canvas id="chartResidualHist"></canvas></div>
+      </div>
+      
+      <div class="col-12">
+        <h4>Feature Importance (permutation)</h4>
+        <div class="chart"><canvas id="chartFeatureImp"></canvas></div>
+      </div>      
+</div>
+
+<script>
+(async function () {
+  const res = await fetch('/api/dashboard-data');
+  const data = await res.json();
+
+  // -------- Metrics --------
+  const fmt = (x, d=3) => (typeof x === 'number' ? x.toFixed(d) : x);
+  document.getElementById('m-r2').textContent = fmt(data.metrics.r2, 4);
+  document.getElementById('m-mae').textContent = fmt(data.metrics.mae, 2);
+  document.getElementById('m-rmse').textContent = fmt(data.metrics.rmse, 2);
+
+  // -------- Show best model name --------
+  document.getElementById('model-name').textContent = `Best model: ${data.model_name}`;
+
+  // -------- Pred vs Actual (scatter with 2 colors + y=x line) --------
+  const points = data.points;
+  const pos = [];  // over-prediction (pred - actual >= 0)
+  const neg = [];  // under-prediction
+  let minA = Infinity, maxA = -Infinity, minP = Infinity, maxP = -Infinity;
+
+  for (const p of points) {
+    const r = p.pred - p.actual;
+    (r >= 0 ? pos : neg).push({ x: p.actual, y: p.pred });
+    if (p.actual < minA) minA = p.actual;
+    if (p.actual > maxA) maxA = p.actual;
+    if (p.pred < minP)  minP = p.pred;
+    if (p.pred > maxP)  maxP = p.pred;
+  }
+  const minAxis = Math.min(minA, minP);
+  const maxAxis = Math.max(maxA, maxP);
+
+  new Chart(document.getElementById('chartPredActual').getContext('2d'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Over-prediction (pred ≥ actual)',
+          data: pos,
+          pointRadius: 3,
+          backgroundColor: 'rgba(25, 135, 84, 0.8)'   // green-ish
+        },
+        {
+          label: 'Under-prediction (pred < actual)',
+          data: neg,
+          pointRadius: 3,
+          backgroundColor: 'rgba(220, 53, 69, 0.8)'   // red-ish
+        },
+        {
+          label: 'y = x (ideal)',
+          type: 'line',
+          data: [{x: minAxis, y: minAxis}, {x: maxAxis, y: maxAxis}],
+          borderWidth: 1.5,
+          borderColor: 'rgba(0,0,0,0.6)',
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'Actual' } },
+        y: { title: { display: true, text: 'Predicted' } }
+      }
+    }
+  });
+
+  // -------- Residuals (bar) --------
+  const residuals = data.residuals;
+  const labels = residuals.map((_, i) => i + 1);
+  new Chart(document.getElementById('chartResiduals').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Residual', data: residuals }] },
+    options: {
+        responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { ticks: { display: false } }, y: { title: { display: true, text: 'Pred − Actual' } } }
+    }
+  });
+
+  // -------- Residual histogram --------
+  function histogram(vals, bins = 20) {
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const width = (max - min) / bins || 1;
+    const edges = Array.from({ length: bins + 1 }, (_, i) => min + i * width);
+    const counts = Array.from({ length: bins }, () => 0);
+    for (const v of vals) {
+      let idx = Math.floor((v - min) / width);
+      if (idx < 0) idx = 0; if (idx >= bins) idx = bins - 1;
+      counts[idx] += 1;
+    }
+    const centers = edges.slice(0, -1).map((e, i) => (e + edges[i + 1]) / 2);
+    return { centers, counts };
+  }
+  const hist = histogram(residuals, 20);
+  new Chart(document.getElementById('chartResidualHist').getContext('2d'), {
+    type: 'bar',
+    data: { labels: hist.centers.map(v => v.toFixed(1)), datasets: [{ label: 'Count', data: hist.counts }] },
+    options: {
+        responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { title: { display: true, text: 'Residual (bins)' } }, y: { title: { display: true, text: 'Count' } } }
+    }
+  });
+
+    // -------- Feature importance --------
+    const fiRes = await fetch('/api/feature-importance');
+  const fiData = await fiRes.json();
+  const fiLabels = fiData.importances.map(x => x.feature);
+  const fiValues = fiData.importances.map(x => x.delta_rmse);
+
+  new Chart(document.getElementById('chartFeatureImp').getContext('2d'), {
+    type: 'bar',
+    data: { labels: fiLabels, datasets: [{ label: 'Δ RMSE (higher = more important)', data: fiValues }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { title: { display: true, text: 'Increase in RMSE when shuffled' } } }
+    }
+  });
+
+})();
+</script>
+
+{% endblock %}
