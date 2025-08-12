@@ -1,0 +1,43 @@
+name: CI - build & smoke test API
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  api-build-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Build the API image from Dockerfile.api
+      - name: Build Docker image
+        run: |
+          docker build -f Dockerfile.api -t student-score-api:${{ github.sha }} .
+
+      # Run the container in the background
+      - name: Run container
+        run: |
+          docker run -d --name api -p 8080:8080 student-score-api:${{ github.sha }}
+          # give it a moment to boot
+          for i in {1..10}; do
+            sleep 2
+            if curl -sf http://localhost:8080/health >/dev/null; then
+              echo "API is healthy"
+              exit 0
+            fi
+            echo "Waiting for API..."
+          done
+          echo "API failed to become healthy" >&2
+          docker logs api || true
+          exit 1
+
+      # Always show last logs to aid debugging
+      - name: Show container logs
+        if: always()
+        run: docker logs api || true
+
+      - name: Stop container
+        if: always()
+        run: docker stop api || true
