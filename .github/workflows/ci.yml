@@ -11,12 +11,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build the API image from Dockerfile.api
+      # Building the API image from Dockerfile.api
       - name: Build Docker image
         run: |
           docker build -f Dockerfile.api -t student-score-api:${{ github.sha }} .
 
-      # Run the container in the background
+      # Running the container in the background
       - name: Run container
         run: |
           docker run -d --name api -p 8080:8080 student-score-api:${{ github.sha }}
@@ -33,7 +33,7 @@ jobs:
           docker logs api || true
           exit 1
 
-      # Always show last logs to aid debugging
+      # logs
       - name: Show container logs
         if: always()
         run: docker logs api || true
@@ -48,11 +48,11 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write     # needed for OIDC
+      id-token: write
       contents: read
     env:
-      AWS_REGION: eu-north-1                # <— your region
-      ECR_REPO: student-score-api          # <— your ECR repo name
+      AWS_REGION: eu-north-1
+      ECR_REPO: student-score-api
     steps:
       - name: Checkout
         uses: actions/checkout@v4
