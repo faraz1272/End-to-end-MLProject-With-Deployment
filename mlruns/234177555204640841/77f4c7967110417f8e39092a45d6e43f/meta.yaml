@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/farazahmed/Documents/GitHub/End-to-end-MLProject-With-Deployment/mlruns/234177555204640841/77f4c7967110417f8e39092a45d6e43f/artifacts
+end_time: 1755016125709
+entry_point_name: ''
+experiment_id: '234177555204640841'
+lifecycle_stage: active
+run_id: 77f4c7967110417f8e39092a45d6e43f
+run_name: multi-model-grid
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1755016101154
+status: 3
+tags: []
+user_id: farazahmed

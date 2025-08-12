@@ -23,6 +23,8 @@ from src.exception import CustomException
 from src.logger import logging
 from src.utils import save_object, evaluate_models
 
+import mlflow
+
 @dataclass
 class ModelTrainerConfig:
     trained_model_file_path: str
@@ -109,30 +111,84 @@ class ModelTrainer:
                 
             }
 
-            model_report:dict= evaluate_models(X_train= X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
-                                               models=models, param=params)
+                    # --- MLflow: start a run (uses local ./mlruns by default) ---
+            mlflow.set_experiment("student-score")   # creates/uses this experiment locally
+            with mlflow.start_run(run_name="multi-model-grid"):
+                # Log which models we considered
+                mlflow.log_param("candidate_models", list(models.keys()))
+
+                # Train/evaluate
+                model_report: dict = evaluate_models(
+                    X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                    models=models, param=params
+                )
+
+                # Log each model's R^2 as a metric
+                for name, score in model_report.items():
+                    mlflow.log_metric(f"r2_{name.replace(' ', '_').lower()}", float(score))
+
+                best_model_score = max(sorted(model_report.values()))
+                best_model_name = list(model_report.keys())[
+                    list(model_report.values()).index(best_model_score)
+                ]
+                best_model = models[best_model_name]
+
+                if best_model_score < self.model_trainer_config.min_r2:
+                    raise CustomException("No best model found")
+                logging.info("Best model found on both training and testing dataset")
+
+                # Save best model as before
+                save_object(
+                    file_path=self.model_trainer_config.trained_model_file_path,
+                    obj=best_model
+                )
+
+                # --- MLflow: log summary + artifacts ---
+                mlflow.set_tag("best_model", best_model_name)
+                mlflow.log_metric("r2_best", float(best_model_score))
+
+                # Log the serialized model and (if present) the preprocessor
+                mlflow.log_artifact(self.model_trainer_config.trained_model_file_path)
+                maybe_preproc = os.path.join(
+                    os.path.dirname(self.model_trainer_config.trained_model_file_path),
+                    "preprocessor.pkl"
+                )
+                if os.path.exists(maybe_preproc):
+                    mlflow.log_artifact(maybe_preproc)
+
+                # Compute final R^2 in the same way you already do
+                predicted = best_model.predict(X_test)
+                r2_value = r2_score(y_test, predicted)
+
+                # Optionally log the final R^2 again (sanity)
+                mlflow.log_metric("r2_on_holdout", float(r2_value))
+
+                return best_model_name, r2_value
+
+            # model_report:dict= evaluate_models(X_train= X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
+            #                                    models=models, param=params)
             
-            best_model_score = max(sorted(model_report.values()))
+            # best_model_score = max(sorted(model_report.values()))
 
-            best_model_name = list(model_report.keys())[
-                list(model_report.values()).index(best_model_score)
-            ]
+            # best_model_name = list(model_report.keys())[
+            #     list(model_report.values()).index(best_model_score)
+            # ]
 
-            best_model = models[best_model_name]
+            # best_model = models[best_model_name]
 
-            if best_model_score<self.model_trainer_config.min_r2:
-                raise CustomException("No best model found")
-            logging.info(f"Best model found on both training and testing dataset")
+            # if best_model_score<self.model_trainer_config.min_r2:
+            #     raise CustomException("No best model found")
+            # logging.info(f"Best model found on both training and testing dataset")
 
-            save_object(
-                file_path=self.model_trainer_config.trained_model_file_path,
-                obj=best_model
-            )
+            # save_object(
+            #     file_path=self.model_trainer_config.trained_model_file_path,
+            #     obj=best_model
+            # )
 
-            predicted = best_model.predict(X_test)
-            r2_value = r2_score(y_test, predicted)
+            # predicted = best_model.predict(X_test)
+            # r2_value = r2_score(y_test, predicted)
 
-            return best_model_name, r2_value
+            # return best_model_name, r2_value
 
         except Exception as e:
             raise CustomException(e, sys)

@@ -1,0 +1,15 @@
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+.ipynb_checkpoints/
+mlruns/
+data/
+notebook/
+*.ipynb
+dist/
+build/

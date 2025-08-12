@@ -10,4 +10,3 @@ flask
 gunicorn
 PyYAML
 mlflow
--e .
