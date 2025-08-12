@@ -4,7 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Student Score{% endblock %}</title>
-    <!-- Simple, CDN-only styles & charts -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -20,10 +19,9 @@
           border-radius: 12px;
           box-shadow: 0 1px 6px rgba(0,0,0,.06);
           position: relative;
-          height: 260px;            /* set the chart height here */
+          height: 260px;
         }
       
-        /* Let canvas fill its wrapper — no padding on canvas! */
         canvas { display: block; width: 100% !important; height: 100% !important; }
       </style>      
   </head>

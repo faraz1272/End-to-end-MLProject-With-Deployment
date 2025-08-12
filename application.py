@@ -43,7 +43,6 @@ def predict_datapoint():
 def health():
     return {"status": "ok"}, 200
 
-# Accept both "race_ethnicity" (API) and "ethnicity" (form) for convenience
 FEATURE_COLUMNS = [
     "gender",
     "race_ethnicity",
@@ -142,14 +141,12 @@ def feature_importance():
     Permutation importance on a small sample of test.csv.
     Returns: [{feature, delta_rmse}], sorted desc.
     """
-    # Load data
     test_csv = os.path.join(ARTIFACTS_DIR, "test.csv")
     df = pd.read_csv(test_csv)
 
     X = df[FEATURE_COLUMNS].copy()
     y = df[TARGET_COL].to_numpy()
 
-    # Sample to keep it snappy
     n = min(500, len(X))
     X = X.sample(n=n, random_state=42)
     y = y[X.index]
@@ -165,7 +162,7 @@ def feature_importance():
 
     for col in FEATURE_COLUMNS:
         X_shuffled = X.copy()
-        # shuffle this column (permute within column preserves distribution)
+
         X_shuffled[col] = X_shuffled[col].sample(frac=1.0, random_state=42).values
 
         pred = pp.predict(X_shuffled)
@@ -183,12 +180,11 @@ def feature_importance():
 
 @app.route("/", methods=["GET"])
 def index():
-    # ensure we actually render index.html as a Jinja template
     return render_template("index.html")
 
 @app.route("/api/eda", methods=["GET"])
 def eda_summary():
-    """Quick EDA for landing page cards & charts."""
+    """EDA for landing page cards & charts."""
     csv_path = os.path.join(ARTIFACTS_DIR, "train.csv")
     df = pd.read_csv(csv_path)
 
@@ -201,7 +197,7 @@ def eda_summary():
     median = float(df[target].median())
     std = float(df[target].std(ddof=1))
 
-    # Correlations (with numeric columns we know)
+    # Correlations (with numeric columns)
     corr = {}
     for c in num_cols:
         if c in df.columns:
@@ -295,7 +291,6 @@ def feedback():
             w.writerow(["ts_utc", "name", "email", "message"])
         w.writerow([datetime.datetime.utcnow().isoformat(), name, email, message])
 
-    # bounce back to landing with a small success flag
     return redirect(url_for("index", feedback="thanks"))
     
 if __name__ == "__main__":
