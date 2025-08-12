@@ -41,3 +41,38 @@ jobs:
       - name: Stop container
         if: always()
         run: docker stop api || true
+
+  build-and-push-ecr:
+    name: Build & Push to ECR (main only)
+    needs: api-build-and-smoke-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write     # needed for OIDC
+      contents: read
+    env:
+      AWS_REGION: eu-north-1                # <— your region
+      ECR_REPO: student-score-api          # <— your ECR repo name
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::864624564382:role/GitHubActions-ECRPush
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.api
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
