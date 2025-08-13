@@ -76,3 +76,52 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:latest
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
+
+  deploy-eb:
+    name: Deploy to Elastic Beanstalk (eu-west-2)
+    needs: build-and-push-ecr
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: eu-west-2
+      EB_APP: student-score-api
+      EB_ENV: student-score-api-env
+      EB_BUCKET: elasticbeanstalk-eu-west-2-864624564382
+      BUNDLE_KEY_PREFIX: student-score-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::864624564382:role/GitHubActions-ECRPush
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Package Dockerrun
+        run: |
+          VER="v-${GITHUB_SHA::7}-$(date +%Y%m%d-%H%M%S)"
+          echo "VERLABEL=$VER" >> $GITHUB_ENV
+          zip -j beanstalk-bundle.zip Dockerrun.aws.json
+          echo "Created bundle with version $VERLABEL"
+      
+      - name: Upload bundle to S3
+        run: |
+          aws s3 cp beanstalk-bundle.zip \
+            s3://${{ env.EB_BUCKET }}/${{ env.BUNDLE_KEY_PREFIX }}/$VERLABEL.zip
+      
+      - name: Create EB application version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "${{ env.EB_APP }}" \
+            --version-label "$VERLABEL" \
+            --source-bundle S3Bucket="${{ env.EB_BUCKET }}",S3Key="${{ env.BUNDLE_KEY_PREFIX }}/$VERLABEL.zip"
+      
+      - name: Deploy to EB environment
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name "${{ env.EB_ENV }}" \
+            --version-label "$VERLABEL"

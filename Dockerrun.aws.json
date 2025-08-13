@@ -1,0 +1,11 @@
+{
+    "AWSEBDockerrunVersion": "1",
+    "Image": {
+      "Name": "864624564382.dkr.ecr.eu-west-2.amazonaws.com/student-score-api:latest",
+      "Update": "true"
+    },
+    "Ports": [
+      { "ContainerPort": "8080" }
+    ]
+  }
+  
