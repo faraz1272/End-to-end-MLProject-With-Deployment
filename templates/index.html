@@ -131,11 +131,23 @@
             <div class="chart-card h-100">
             <h5 class="mb-2">Tools used</h5>
             <ul class="mb-0">
-                <li><strong>Python &amp; scikit-learn</strong> (+ XGBoost/CatBoost) for modeling.</li>
-                <li><strong>MLflow</strong> for experiment tracking (params, metrics, artifacts).</li>
-                <li><strong>Flask + Gunicorn</strong> API, <strong>Chart.js</strong> &amp; Bootstrap UI.</li>
-                <li><strong>Docker</strong> images; <strong>GitHub Actions</strong> for CI (build &amp; health-check).</li>
-                <li><strong>Amazon ECR</strong> (image registry) &amp; <strong>AWS App Runner</strong> for deploy.</li>
+              <li><strong>Python &amp; scikit-learn for modeling.</li>
+              <li><strong>MLflow</strong> for experiment tracking (params, metrics, artifacts).</li>
+              <li><strong>Flask + Gunicorn</strong> API, <strong>Chart.js</strong> &amp; Bootstrap UI.</li>
+              <li><strong>Docker</strong> images; <strong>GitHub Actions</strong> for CI (build &amp; health-check).</li>
+              <li><strong>Amazon ECR</strong> (image registry) &amp; <strong>AWS Elastic Beanstalk</strong> for deploy.</li>
+              <li class="mt-2"><strong>Algorithms evaluated</strong> (model selection by hold-out R²):
+                <ul class="mb-0">
+                  <li>Random Forest (scikit-learn)</li>
+                  <li>Decision Tree (scikit-learn)</li>
+                  <li>Gradient Boosting (scikit-learn)</li>
+                  <li>Linear Regression (scikit-learn)</li>
+                  <li>KNN Regressor (scikit-learn)</li>
+                  <li>XGBoost Regressor (xgboost)</li>
+                  <li>CatBoost Regressor (catboost)</li>
+                  <li>AdaBoost Regressor (scikit-learn)</li>
+                </ul>
+              </li>
             </ul>
             </div>
         </div>
